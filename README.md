@@ -1,37 +1,37 @@
-# [Preview] Sample Chat App with AOAI
+# [プレビュー] AOAI を使用したサンプルチャットアプリ
 
-This repo contains sample code for a simple chat webapp that integrates with Azure OpenAI. Note: some portions of the app use preview APIs.
+このリポジトリには、Azure OpenAI を統合したシンプルなチャット Web アプリのサンプルコードが含まれています。一部のアプリ機能はプレビュー API を使用しています。
 
-## Prerequisites
-- An existing Azure OpenAI resource and model deployment of a chat model (e.g. `gpt-35-turbo-16k`, `gpt-4`)
-- To use Azure OpenAI on your data, one of the following data sources:
-  - Azure AI Search Index
-  - Azure CosmosDB Mongo vCore vector index
-  - Elasticsearch index (preview)
-  - Pinecone index (private preview)
-  - Azure SQL Server (private preview)
-  - Mongo DB (preview)
+## 前提条件
+- 既存の Azure OpenAI リソースおよびチャットモデルのデプロイメント（例: `gpt-35-turbo-16k`、`gpt-4`）
+- Azure OpenAI をデータに使用する場合、以下のいずれかのデータソースが必要です:
+  - Azure AI Search インデックス
+  - Azure CosmosDB Mongo vCore ベクターインデックス
+  - Elasticsearch インデックス（プレビュー）
+  - Pinecone インデックス（プライベートプレビュー）
+  - Azure SQL Server（プライベートプレビュー）
+  - Mongo DB（プレビュー）
 
-## Configure the app
+## アプリの構成
 
-### Create a .env file for local development
+### ローカル開発用の .env ファイルを作成
 
-Follow instructions below in the [app configuration](#app-settings) section to create a .env file for local development of your app.  This file can be used as a reference to populate the app settings for your Azure App Service deployed webapp.
+以下の[アプリ設定](#アプリ設定)セクションに従って、ローカル開発用の .env ファイルを作成してください。このファイルは Azure App Service にデプロイされた Web アプリの設定を入力するための参照として使用できます。
 
-### Create a JSON file for populating Azure App Service app settings
+### Azure App Service アプリ設定用の JSON ファイルを作成
 
-After creating your .env file, run one of the following commands in your preferred shell to create a JSON representation of your environment which is recognized by Azure App Service.
+.env ファイルを作成した後、以下のいずれかのコマンドを使用して、Azure App Service で認識される環境設定の JSON 表現を作成します。
 
-#### Powershell
+#### PowerShell
 ```powershell
-Get-Content .env | ForEach-Object {   
-     if ($_ -match "(?<name>[A-Z_]+)=(?<value>.*)") {   
-         [PSCustomObject]@{   
-             name = $matches["name"]   
-             value = $matches["value"]   
-             slotSetting = $false  
-         }  
-    }  
+Get-Content .env | ForEach-Object {
+    if ($_ -match "(?<name>[A-Z_]+)=(?<value>.*)") {
+        [PSCustomObject]@{
+            name = $matches["name"]
+            value = $matches["value"]
+            slotSetting = $false
+        }
+    }
 } | ConvertTo-Json | Out-File -FilePath env.json
 ```
 
@@ -40,81 +40,84 @@ Get-Content .env | ForEach-Object { 
 cat .env | jq -R '. | capture("(?<name>[A-Z_]+)=(?<value>.*)")' | jq -s '.[].slotSetting=false' > env.json
 ```
 
-## Deploy the app
+## アプリのデプロイ
 
-### Deploy with Azure Developer CLI
-Please see [README_azd.md](./README_azd.md) for detailed instructions.
+### Azure Developer CLI を使用してデプロイ
+詳細な手順については、[README_azd.md](./README_azd.md) を参照してください。
 
-### One click Azure deployment
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fsample-app-aoai-chatGPT%2Fmain%2Finfrastructure%2Fdeployment.json)
+### ワンクリック Azure デプロイ
+[![Azure にデプロイ](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fsample-app-aoai-chatGPT%2Fmain%2Finfrastructure%2Fdeployment.json)
 
-Click on the Deploy to Azure button and configure your settings in the Azure Portal as described in the [Environment variables](#environment-variables) section.
+"Azure にデプロイ" ボタンをクリックし、Azure ポータルで [環境変数](#environment-variables) セクションに記載されている設定を構成してください。
 
-Please see the [section below](#add-an-identity-provider) for important information about adding authentication to your app.
+### ローカルマシンからデプロイ
 
-### Deploy from your local machine
+1. 以下の[アプリ設定](#アプリ設定)セクションに従い、使用ケースに適した変数で .env ファイルを作成してください。
 
-1. Follow the steps below in the [app configuration](#app-settings) section to construct your .env file with the appropriate variables for your use case.
+2. `start.cmd` を使用してアプリを起動します。これにより、フロントエンドがビルドされ、バックエンド依存関係がインストールされ、アプリが起動します。または、`.vscode/launch.json` の VSCode デバッグ構成を使用してバックエンドをデバッグモードで実行します。
 
-2. Start the app with `start.cmd`. This will build the frontend, install backend dependencies, and then start the app. Or, just run the backend in debug mode using the VSCode debug configuration in `.vscode/launch.json`.
+3. ローカルで実行中のアプリは http://127.0.0.1:50505 で確認できます。
 
-3. You can see the local running app at http://127.0.0.1:50505.
+### Azure CLI を使用してデプロイ
 
-### Deploy with the Azure CLI
+#### Azure App Service の作成
+**注意**: コードを変更した場合は、デプロイ前に `start.cmd` または `start.sh` を使用してアプリコードをビルドしてください。フロントエンドフォルダ内のファイルを更新した場合は、デプロイ前に `static` フォルダに更新が反映されていることを確認してください。
 
-#### Create the Azure App Service
-**NOTE**: If you've made code changes, be sure to **build the app code** with `start.cmd` or `start.sh` before you deploy, otherwise your changes will not be picked up. If you've updated any files in the `frontend` folder, make sure you see updates to the files in the `static` folder before you deploy.
+Azure CLI を使用してローカルマシンからアプリをデプロイできます。バージョン 2.48.1 以降を使用してください。
 
-You can use the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) to deploy the app from your local machine. Make sure you have version 2.48.1 or later.
-
-If this is your first time deploying the app, you can use [az webapp up](https://learn.microsoft.com/en-us/cli/azure/webapp?view=azure-cli-latest#az-webapp-up). Run the following command from the root folder of the repo, updating the placeholder values to your desired app name, resource group, location, and subscription. You can also change the SKU if desired.
-
-`az webapp up --runtime PYTHON:3.11 --sku B1 --name <new-app-name> --resource-group <resource-group-name> --location <azure-region> --subscription <subscription-name>`
-
-Note: if using the Azure CLI version 2.62 or greater, you may also want to add the flag `--track-status False` to prevent the command from failing due to startup errors.  Startup errors can be solved by following the instructions in the next section about [updating app configuration](#update-app-configuration).
-
-#### Update app configuration
-
-After creating your Azure App Service, follow these steps to update the configuration to allow your application to properly start up.
-
-1. Set the app startup command
+アプリを初めてデプロイする場合、[az webapp up](https://learn.microsoft.com/en-us/cli/azure/webapp?view=azure-cli-latest#az-webapp-up) を使用できます。以下のコマンドをリポジトリのルートフォルダから実行してください。
+```bash
+az webapp up --runtime PYTHON:3.11 --sku B1 --name <new-app-name> --resource-group <resource-group-name> --location <azure-region> --subscription <subscription-name>
 ```
+
+Azure CLI バージョン 2.62 以上を使用している場合、以下のフラグを追加することを検討してください。
+```bash
+--track-status False
+```
+このフラグは、起動エラーによるコマンドの失敗を防ぐためのものです。起動エラーは、次のセクションで説明する[アプリ構成の更新](#update-app-configuration)手順に従って解決してください。
+
+#### アプリ構成の更新
+Azure App Service を作成した後、アプリケーションを適切に起動するための構成を更新します。
+
+1. アプリの起動コマンドを設定します。
+```bash
 az webapp config set --startup-file "python3 -m gunicorn app:app" --name <new-app-name>
 ```
-2. Set `WEBSITE_WEBDEPLOY_USE_SCM=false` to allow local code deployment.
-```
+2. ローカルコードデプロイを許可するために `WEBSITE_WEBDEPLOY_USE_SCM=false` を設定します。
+```bash
 az webapp config appsettings set -g <resource-group-name> -n <existing-app-name> --settings WEBSITE_WEBDEPLOY_USE_SCM=false
 ```
-3. Set all of your app settings in your local .env file at once by [creating a JSON representation](#create-a-json-file-for-populating-azure-app-service-app-settings) of the .env file, and then run the following command.
-```
+3. ローカル .env ファイルの設定を一括で適用します。
+```bash
 az webapp config appsettings set -g <resource-group-name> -n <existing-app-name> --settings "@env.json"
 ```
 
-#### Update an existing app
+#### 既存のアプリの更新
+Azure ポータルでアプリサービスリソースを表示してランタイムスタックを確認します。ランタイムが "Python - 3.10" の場合は `PYTHON:3.10` を、"Python - 3.11" の場合は `PYTHON:3.11` を使用します。
 
-Check the runtime stack for your app by viewing the app service resource in the Azure Portal. If it shows "Python - 3.10", use `PYTHON:3.10` in the runtime argument below. If it shows "Python - 3.11", use `PYTHON:3.11` in the runtime argument below. 
+同様に SKU も確認し、適切な値を使用してください（例: "Basic (B1)" の場合は `B1`）。
 
-Check the SKU in the same way. Use the abbreviated SKU name in the argument below, e.g. for "Basic (B1)" the SKU is `B1`. 
-
-Then, use these commands to deploy your local code to the existing app:
+次に、以下のコマンドを使用してローカルコードを既存のアプリにデプロイします。
 
 1. `az webapp up --runtime <runtime-stack> --sku <sku> --name <existing-app-name> --resource-group <resource-group-name>`
 1. `az webapp config set --startup-file "python3 -m gunicorn app:app" --name <existing-app-name>`
 
-Make sure that the app name and resource group match exactly for the app that was previously deployed.
+アプリ名とリソースグループ名が、以前デプロイされたアプリと正確に一致していることを確認してください。
 
-Deployment will take several minutes. When it completes, you should be able to navigate to your app at {app-name}.azurewebsites.net.
+デプロイには数分かかります。完了後、`{app-name}.azurewebsites.net` にアクセスしてアプリを確認できます。
 
-## Authentication
+## 認証
 
-### Add an identity provider
-After deployment, you will need to add an identity provider to provide authentication support in your app. See [this tutorial](https://learn.microsoft.com/en-us/azure/app-service/scenario-secure-app-authentication-app-service) for more information.
+### ID プロバイダーの追加
+デプロイ後、アプリに認証を提供するために ID プロバイダーを追加する必要があります。詳細については、[このチュートリアル](https://learn.microsoft.com/en-us/azure/app-service/scenario-secure-app-authentication-app-service)を参照してください。
 
-If you don't add an identity provider, the chat functionality of your app will be blocked to prevent unauthorized access to your resources and data. 
+ID プロバイダーを追加しない場合、アプリのチャット機能は、リソースやデータへの不正アクセスを防ぐためにブロックされます。
 
-To remove this restriction, you can add `AUTH_ENABLED=False` to the environment variables. This will disable authentication and allow anyone to access the chat functionality of your app. **This is not recommended for production apps.**
+この制限を解除するには、環境変数に `AUTH_ENABLED=False` を追加できます。これにより認証が無効になり、誰でもアプリのチャット機能にアクセスできるようになります。  
+**ただし、これは本番アプリには推奨されません。**
 
-To add further access controls, update the logic in `getUserInfoList` in `frontend/src/pages/chat/Chat.tsx`. 
+さらにアクセス制御を追加するには、`frontend/src/pages/chat/Chat.tsx` 内の `getUserInfoList` ロジックを更新してください。
+
 
 ### Using Microsoft Entra ID
 
@@ -131,93 +134,96 @@ To enable Microsoft Entra ID for intra-service authentication:
 
 Note: RBAC assignments can take a few minutes before becoming effective.
 
-## App Configuration
+## アプリ設定
 
-### App Settings
+### アプリ設定
 
-#### Basic Chat Experience
-1. Copy `.env.sample` to a new file called `.env` and configure the settings as described in the table below.
+#### 基本的なチャット体験
+1. `.env.sample` をコピーして、新しいファイル `.env` を作成し、以下の表に記載されている設定に従って設定を構成してください。
 
-    | App Setting | Required? | Default Value | Note |
+    | アプリ設定 | 必須か？ | デフォルト値 | 説明 |
     | --- | --- | --- | ------------- |
-    |AZURE_OPENAI_RESOURCE| Only if `AZURE_OPENAI_ENDPOINT` is not set || The name of your Azure OpenAI resource (only one of AZURE_OPENAI_RESOURCE/AZURE_OPENAI_ENDPOINT is required)|
-    |AZURE_OPENAI_ENDPOINT| Only if `AZURE_OPENAI_RESOURCE` is not set ||The endpoint of your Azure OpenAI resource (only one of AZURE_OPENAI_RESOURCE/AZURE_OPENAI_ENDPOINT is required)|
-    |AZURE_OPENAI_MODEL|Yes||The name of your model deployment|
-    |AZURE_OPENAI_KEY|Optional if using Microsoft Entra ID -- see our documentation on the required resource setup for identity-based authentication.||One of the API keys of your Azure OpenAI resource|
-    |AZURE_OPENAI_TEMPERATURE|No|0|What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. A value of 0 is recommended when using your data.|
-    |AZURE_OPENAI_TOP_P|No|1.0|An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. We recommend setting this to 1.0 when using your data.|
-    |AZURE_OPENAI_MAX_TOKENS|No|1000|The maximum number of tokens allowed for the generated answer.|
-    |AZURE_OPENAI_STOP_SEQUENCE|No||Up to 4 sequences where the API will stop generating further tokens. Represent these as a string joined with "|", e.g. `"stop1|stop2|stop3"`|
-    |AZURE_OPENAI_SYSTEM_MESSAGE|No|You are an AI assistant that helps people find information.|A brief description of the role and tone the model should use|
-    |AZURE_OPENAI_STREAM|No|True|Whether or not to use streaming for the response. Note: Setting this to true prevents the use of prompt flow.|
-    |AZURE_OPENAI_EMBEDDING_NAME|Only if using vector search using an Azure OpenAI embedding model||The name of your embedding model deployment if using vector search.
+    |AZURE_OPENAI_RESOURCE| `AZURE_OPENAI_ENDPOINT` が設定されていない場合のみ必須 || Azure OpenAI リソースの名前（AZURE_OPENAI_RESOURCE または AZURE_OPENAI_ENDPOINT のいずれかが必要）|
+    |AZURE_OPENAI_ENDPOINT| `AZURE_OPENAI_RESOURCE` が設定されていない場合のみ必須 || Azure OpenAI リソースのエンドポイント（AZURE_OPENAI_RESOURCE または AZURE_OPENAI_ENDPOINT のいずれかが必要）|
+    |AZURE_OPENAI_MODEL|必須||モデルデプロイメントの名前|
+    |AZURE_OPENAI_KEY|Microsoft Entra ID を使用する場合は任意 -- ID ベースの認証に必要なリソース設定についてはドキュメントを参照してください。||Azure OpenAI リソースの API キーのいずれか|
+    |AZURE_OPENAI_TEMPERATURE|いいえ|0|サンプリング温度を 0 から 2 の間で設定。0.8 のような高い値は出力をよりランダムにし、0.2 のような低い値はより焦点が絞られ決定論的になります。データを使用する場合は 0 を推奨。|
+    |AZURE_OPENAI_TOP_P|いいえ|1.0|サンプリング温度の代わりに「核サンプリング」と呼ばれる方法で、top_p 確率質量のトークンの結果をモデルが考慮します。データを使用する場合は 1.0 に設定することを推奨。|
+    |AZURE_OPENAI_MAX_TOKENS|いいえ|1000|生成される回答の最大トークン数。|
+    |AZURE_OPENAI_STOP_SEQUENCE|いいえ||API がトークンの生成を停止する最大 4 つのシーケンス。これらを "|" で結合した文字列として表現（例: `"stop1|stop2|stop3"`）。|
+    |AZURE_OPENAI_SYSTEM_MESSAGE|いいえ|You are an AI assistant that helps people find information.|モデルが使用する役割とトーンの簡潔な説明。|
+    |AZURE_OPENAI_STREAM|いいえ|True|レスポンスでストリーミングを使用するかどうかを設定します。注意: これを true に設定するとプロンプトフローは使用できなくなります。|
+    |AZURE_OPENAI_EMBEDDING_NAME|Azure OpenAI 埋め込みモデルを使用してベクトル検索を行う場合のみ必須||ベクトル検索を使用する場合の埋め込みモデルデプロイメントの名前。|
 
-    See the [documentation](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#example-response-2) for more information on these parameters.
+    これらのパラメータの詳細については、[ドキュメント](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#example-response-2)を参照してください。
 
 
-#### Chat with your data
 
-[More information about Azure OpenAI on your data](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/concepts/use-your-data)
+#### データとのチャット
 
-#### Chat with your data using Azure Cognitive Search
+[Azure OpenAI を使用したデータとのチャットに関する詳細情報](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/concepts/use-your-data)
 
-1. Update the `AZURE_OPENAI_*` environment variables as described in the [basic chat experience](#basic-chat-experience) above. 
+#### Azure Cognitive Search を使用したデータとのチャット
 
-2. To connect to your data, you need to specify an Azure Cognitive Search index to use. You can [create this index yourself](https://learn.microsoft.com/en-us/azure/search/search-get-started-portal) or use the [Azure AI Studio](https://oai.azure.com/portal/chat) to create the index for you.
+1. 上記の [基本的なチャット体験](#basic-chat-experience) で説明したように、`AZURE_OPENAI_*` 環境変数を更新してください。
 
-3. Configure data source settings as described in the table below.
+2. データに接続するには、使用する Azure Cognitive Search インデックスを指定する必要があります。 [このインデックスを自分で作成する](https://learn.microsoft.com/en-us/azure/search/search-get-started-portal)か、[Azure AI Studio](https://oai.azure.com/portal/chat) を使用してインデックスを作成してください。
 
-    | App Setting | Required? | Default Value | Note |
+3. 以下の表に記載されたようにデータソースの設定を構成してください。
+
+    | アプリ設定 | 必須か？ | デフォルト値 | 説明 |
     | --- | --- | --- | ------------- |
-    |DATASOURCE_TYPE|Yes||Must be set to `AzureCognitiveSearch`|
-    |AZURE_SEARCH_SERVICE|Yes||The name of your Azure AI Search resource|
-    |AZURE_SEARCH_INDEX|Yes||The name of your Azure AI Search Index|
-    |AZURE_SEARCH_KEY|Optional if using Microsoft Entra ID -- see our documentation on the required resource setup for identity-based authentication.||An **admin key** for your Azure AI Search resource.|
-    |AZURE_SEARCH_USE_SEMANTIC_SEARCH|No|False|Whether or not to use semantic search|
-    |AZURE_SEARCH_QUERY_TYPE|No|simple|Query type: simple, semantic, vector, vectorSimpleHybrid, or vectorSemanticHybrid. Takes precedence over AZURE_SEARCH_USE_SEMANTIC_SEARCH|
-    |AZURE_SEARCH_SEMANTIC_SEARCH_CONFIG|No||The name of the semantic search configuration to use if using semantic search.|
-    |AZURE_SEARCH_TOP_K|No|5|The number of documents to retrieve when querying your search index.|
-    |AZURE_SEARCH_ENABLE_IN_DOMAIN|No|True|Limits responses to only queries relating to your data.|
-    |AZURE_SEARCH_STRICTNESS|No|3|Integer from 1 to 5 specifying the strictness for the model limiting responses to your data.|
-    |AZURE_SEARCH_CONTENT_COLUMNS|No||List of fields in your search index that contains the text content of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
-    |AZURE_SEARCH_FILENAME_COLUMN|No|| Field from your search index that gives a unique identifier of the source of your data to display in the UI.|
-    |AZURE_SEARCH_TITLE_COLUMN|No||Field from your search index that gives a relevant title or header for your data content to display in the UI.|
-    |AZURE_SEARCH_URL_COLUMN|No||Field from your search index that contains a URL for the document, e.g. an Azure Blob Storage URI. This value is not currently used.|
-    |AZURE_SEARCH_VECTOR_COLUMNS|No||List of fields in your search index that contain vector embeddings of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
-    |AZURE_SEARCH_PERMITTED_GROUPS_COLUMN|No||Field from your Azure AI Search index that contains AAD group IDs that determine document-level access control.|
+    |DATASOURCE_TYPE|はい||`AzureCognitiveSearch` に設定する必要があります。|
+    |AZURE_SEARCH_SERVICE|はい||Azure AI Search リソースの名前。|
+    |AZURE_SEARCH_INDEX|はい||Azure AI Search インデックスの名前。|
+    |AZURE_SEARCH_KEY|Microsoft Entra ID を使用する場合は任意 -- ID ベースの認証に必要なリソース設定についてはドキュメントを参照してください。||Azure AI Search リソースの **管理キー**。|
+    |AZURE_SEARCH_USE_SEMANTIC_SEARCH|いいえ|False|セマンティック検索を使用するかどうか。|
+    |AZURE_SEARCH_QUERY_TYPE|いいえ|simple|クエリの種類: `simple`、`semantic`、`vector`、`vectorSimpleHybrid`、`vectorSemanticHybrid`。`AZURE_SEARCH_USE_SEMANTIC_SEARCH` より優先されます。|
+    |AZURE_SEARCH_SEMANTIC_SEARCH_CONFIG|いいえ||セマンティック検索を使用する場合の設定名。|
+    |AZURE_SEARCH_TOP_K|いいえ|5|検索インデックスをクエリする際に取得するドキュメントの数。|
+    |AZURE_SEARCH_ENABLE_IN_DOMAIN|いいえ|True|クエリをデータに関連するものに限定します。|
+    |AZURE_SEARCH_STRICTNESS|いいえ|3|モデルが応答をデータに限定する厳密性を指定する 1 から 5 の整数。|
+    |AZURE_SEARCH_CONTENT_COLUMNS|いいえ||検索インデックス内の、ボットの応答を構成するために使用されるドキュメントのテキストコンテンツを含むフィールドのリスト。`|` で結合（例: `"product_description|product_manual"`）。|
+    |AZURE_SEARCH_FILENAME_COLUMN|いいえ||UI に表示するデータソースの一意の識別子を提供する検索インデックスのフィールド。|
+    |AZURE_SEARCH_TITLE_COLUMN|いいえ||UI に表示するデータコンテンツの関連タイトルまたはヘッダーを提供する検索インデックスのフィールド。|
+    |AZURE_SEARCH_URL_COLUMN|いいえ||ドキュメントの URL を含む検索インデックスのフィールド（例: Azure Blob Storage URI）。現在は使用されていません。|
+    |AZURE_SEARCH_VECTOR_COLUMNS|いいえ||ボットの応答を構成するために使用されるドキュメントのベクトル埋め込みを含む検索インデックスのフィールドのリスト。`|` で結合（例: `"product_description|product_manual"`）。|
+    |AZURE_SEARCH_PERMITTED_GROUPS_COLUMN|いいえ||ドキュメントレベルのアクセス制御を決定する AAD グループ ID を含む Azure AI Search インデックスのフィールド。|
 
-    When using your own data with a vector index, ensure these settings are configured on your app:
-    - `AZURE_SEARCH_QUERY_TYPE`: can be `vector`, `vectorSimpleHybrid`, or `vectorSemanticHybrid`,
-    - `AZURE_OPENAI_EMBEDDING_NAME`: the name of your Ada (text-embedding-ada-002) model deployment on your Azure OpenAI resource.
-    - `AZURE_SEARCH_VECTOR_COLUMNS`: the vector columns in your index to use when searching. Join them with `|` like `contentVector|titleVector`.
+    独自のデータとベクトルインデックスを使用する場合、以下の設定をアプリに構成してください：
+    - `AZURE_SEARCH_QUERY_TYPE`: `vector`、`vectorSimpleHybrid`、または `vectorSemanticHybrid` に設定。
+    - `AZURE_OPENAI_EMBEDDING_NAME`: Azure OpenAI リソース上の Ada（`text-embedding-ada-002`）モデルデプロイメントの名前。
+    - `AZURE_SEARCH_VECTOR_COLUMNS`: 検索に使用するインデックス内のベクトル列。`|` で結合（例: `contentVector|titleVector`）。
 
-#### Chat with your data using Azure Cosmos DB
 
-1. Update the `AZURE_OPENAI_*` environment variables as described in the [basic chat experience](#basic-chat-experience) above. 
+#### Azure Cosmos DB を使用したデータとのチャット
 
-2. To connect to your data, you need to specify an Azure Cosmos DB database configuration.  Learn more about [creating an Azure Cosmos DB resource](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/quickstart-portal).
+1. 上記の [基本的なチャット体験](#basic-chat-experience) で説明したように、`AZURE_OPENAI_*` 環境変数を更新してください。
 
-3. Configure data source settings as described in the table below.
+2. データに接続するには、Azure Cosmos DB データベースの設定を指定する必要があります。[Azure Cosmos DB リソースの作成方法についてはこちら](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/quickstart-portal)をご覧ください。
 
-    | App Setting | Required? | Default Value | Note |
+3. 以下の表に記載されたようにデータソースの設定を構成してください。
+
+    | アプリ設定 | 必須か？ | デフォルト値 | 説明 |
     | --- | --- | --- | ------------- |
-    |DATASOURCE_TYPE|Yes||Must be set to `AzureCosmosDB`|
-    |AZURE_COSMOSDB_MONGO_VCORE_CONNECTION_STRING|Yes||The connection string used to connect to your Azure Cosmos DB instance|
-    |AZURE_COSMOSDB_MONGO_VCORE_INDEX|Yes||The name of your Azure Cosmos DB vector index|
-    |AZURE_COSMOSDB_MONGO_VCORE_DATABASE|Yes||The name of your Azure Cosmos DB database|
-    |AZURE_COSMOSDB_MONGO_VCORE_CONTAINER|Yes||The name of your Azure Cosmos DB container|
-    |AZURE_COSMOSDB_MONGO_VCORE_TOP_K|No|5|The number of documents to retrieve when querying your search index.|
-    |AZURE_COSMOSDB_MONGO_VCORE_ENABLE_IN_DOMAIN|No|True|Limits responses to only queries relating to your data.|
-    |AZURE_COSMOSDB_MONGO_VCORE_STRICTNESS|No|3|Integer from 1 to 5 specifying the strictness for the model limiting responses to your data.|
-    |AZURE_COSMOSDB_MONGO_VCORE_CONTENT_COLUMNS|No||List of fields in your search index that contains the text content of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
-    |AZURE_COSMOSDB_MONGO_VCORE_FILENAME_COLUMN|No|| Field from your search index that gives a unique identifier of the source of your data to display in the UI.|
-    |AZURE_COSMOSDB_MONGO_VCORE_TITLE_COLUMN|No||Field from your search index that gives a relevant title or header for your data content to display in the UI.|
-    |AZURE_COSMOSDB_MONGO_VCORE_URL_COLUMN|No||Field from your search index that contains a URL for the document, e.g. an Azure Blob Storage URI. This value is not currently used.|
-    |AZURE_COSMOSDB_MONGO_VCORE_VECTOR_COLUMNS|No||List of fields in your search index that contain vector embeddings of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
+    |DATASOURCE_TYPE|はい||`AzureCosmosDB` に設定する必要があります。|
+    |AZURE_COSMOSDB_MONGO_VCORE_CONNECTION_STRING|はい||Azure Cosmos DB インスタンスに接続するために使用される接続文字列。|
+    |AZURE_COSMOSDB_MONGO_VCORE_INDEX|はい||Azure Cosmos DB ベクトルインデックスの名前。|
+    |AZURE_COSMOSDB_MONGO_VCORE_DATABASE|はい||Azure Cosmos DB データベースの名前。|
+    |AZURE_COSMOSDB_MONGO_VCORE_CONTAINER|はい||Azure Cosmos DB コンテナーの名前。|
+    |AZURE_COSMOSDB_MONGO_VCORE_TOP_K|いいえ|5|検索インデックスをクエリする際に取得するドキュメントの数。|
+    |AZURE_COSMOSDB_MONGO_VCORE_ENABLE_IN_DOMAIN|いいえ|True|クエリをデータに関連するものに限定します。|
+    |AZURE_COSMOSDB_MONGO_VCORE_STRICTNESS|いいえ|3|モデルが応答をデータに限定する厳密性を指定する 1 から 5 の整数。|
+    |AZURE_COSMOSDB_MONGO_VCORE_CONTENT_COLUMNS|いいえ||検索インデックス内の、ボットの応答を構成するために使用されるドキュメントのテキストコンテンツを含むフィールドのリスト。`|` で結合（例: `"product_description|product_manual"`）。|
+    |AZURE_COSMOSDB_MONGO_VCORE_FILENAME_COLUMN|いいえ||UI に表示するデータソースの一意の識別子を提供する検索インデックスのフィールド。|
+    |AZURE_COSMOSDB_MONGO_VCORE_TITLE_COLUMN|いいえ||UI に表示するデータコンテンツの関連タイトルまたはヘッダーを提供する検索インデックスのフィールド。|
+    |AZURE_COSMOSDB_MONGO_VCORE_URL_COLUMN|いいえ||ドキュメントの URL を含む検索インデックスのフィールド（例: Azure Blob Storage URI）。現在は使用されていません。|
+    |AZURE_COSMOSDB_MONGO_VCORE_VECTOR_COLUMNS|いいえ||ボットの応答を構成するために使用されるドキュメントのベクトル埋め込みを含む検索インデックスのフィールドのリスト。`|` で結合（例: `"product_description|product_manual"`）。|
 
-    Azure Cosmos DB uses vector search by default, so ensure these settings are configured on your app:
-    - `AZURE_OPENAI_EMBEDDING_NAME`: the name of your Ada (text-embedding-ada-002) model deployment on your Azure OpenAI resource.
-    - `AZURE_COSMOSDB_MONGO_VCORE_VECTOR_COLUMNS`: the vector columns in your index to use when searching. Join them with `|` like `contentVector|titleVector`.
+    Azure Cosmos DB はデフォルトでベクトル検索を使用するため、以下の設定をアプリに構成してください：
+    - `AZURE_OPENAI_EMBEDDING_NAME`: Azure OpenAI リソース上の Ada（`text-embedding-ada-002`）モデルデプロイメントの名前。
+    - `AZURE_COSMOSDB_MONGO_VCORE_VECTOR_COLUMNS`: 検索に使用するインデックス内のベクトル列。`|` で結合（例: `contentVector|titleVector`）。
+
 
 #### Chat with your data using Elasticsearch (Preview)
 
@@ -254,32 +260,33 @@ Note: RBAC assignments can take a few minutes before becoming effective.
     - `ELASTICSEARCH_EMBEDDING_MODEL_ID`: the ID of the trained model used to produce embeddings on your index.
     - `ELASTICSEARCH_VECTOR_COLUMNS`: the vector columns in your index to use when searching. Join them with `|` like `contentVector|titleVector`.
 
-#### Chat with your data using Pinecone (Private Preview)
+#### Pinecone を使用したデータとのチャット（プライベートプレビュー）
 
-1. Update the `AZURE_OPENAI_*` environment variables as described in the [basic chat experience](#basic-chat-experience) above. 
+1. 上記の [基本的なチャット体験](#basic-chat-experience) で説明したように、`AZURE_OPENAI_*` 環境変数を更新してください。
 
-2. To connect to your data, you need to specify an Pinecone vector database configuration. Learn more about [Pinecone](https://www.pinecone.io/).
+2. データに接続するには、Pinecone ベクトルデータベースの設定を指定する必要があります。[Pinecone についてはこちら](https://www.pinecone.io/)をご覧ください。
 
-3. Configure data source settings as described in the table below.
+3. 以下の表に記載されたようにデータソースの設定を構成してください。
 
-    | App Setting | Required? | Default Value | Note |
+    | アプリ設定 | 必須か？ | デフォルト値 | 説明 |
     | --- | --- | --- | ------------- |
-    |DATASOURCE_TYPE|Yes||Must be set to `Pinecone`|
-    |PINECONE_ENVIRONMENT|Yes||The name of your Pinecone environment|
-    |PINECONE_INDEX_NAME|Yes||The name of your Pinecone index|
-    |PINECONE_API_KEY|Yes||The API key used to connect to your Pinecone instance|
-    |PINECONE_TOP_K|No|5|The number of documents to retrieve when querying your search index.|
-    |PINECONE_ENABLE_IN_DOMAIN|No|True|Limits responses to only queries relating to your data.|
-    |PINECONE_STRICTNESS|No|3|Integer from 1 to 5 specifying the strictness for the model limiting responses to your data.|
-    |PINECONE_CONTENT_COLUMNS|No||List of fields in your search index that contains the text content of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
-    |PINECONE_FILENAME_COLUMN|No|| Field from your search index that gives a unique identifier of the source of your data to display in the UI.|
-    |PINECONE_TITLE_COLUMN|No||Field from your search index that gives a relevant title or header for your data content to display in the UI.|
-    |PINECONE_URL_COLUMN|No||Field from your search index that contains a URL for the document, e.g. an Azure Blob Storage URI. This value is not currently used.|
-    |PINECONE_VECTOR_COLUMNS|No||List of fields in your search index that contain vector embeddings of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
+    |DATASOURCE_TYPE|はい||`Pinecone` に設定する必要があります。|
+    |PINECONE_ENVIRONMENT|はい||Pinecone 環境の名前。|
+    |PINECONE_INDEX_NAME|はい||Pinecone インデックスの名前。|
+    |PINECONE_API_KEY|はい||Pinecone インスタンスに接続するために使用される API キー。|
+    |PINECONE_TOP_K|いいえ|5|検索インデックスをクエリする際に取得するドキュメントの数。|
+    |PINECONE_ENABLE_IN_DOMAIN|いいえ|True|クエリをデータに関連するものに限定します。|
+    |PINECONE_STRICTNESS|いいえ|3|モデルが応答をデータに限定する厳密性を指定する 1 から 5 の整数。|
+    |PINECONE_CONTENT_COLUMNS|いいえ||検索インデックス内の、ボットの応答を構成するために使用されるドキュメントのテキストコンテンツを含むフィールドのリスト。`|` で結合（例: `"product_description|product_manual"`）。|
+    |PINECONE_FILENAME_COLUMN|いいえ||UI に表示するデータソースの一意の識別子を提供する検索インデックスのフィールド。|
+    |PINECONE_TITLE_COLUMN|いいえ||UI に表示するデータコンテンツの関連タイトルまたはヘッダーを提供する検索インデックスのフィールド。|
+    |PINECONE_URL_COLUMN|いいえ||ドキュメントの URL を含む検索インデックスのフィールド（例: Azure Blob Storage URI）。現在は使用されていません。|
+    |PINECONE_VECTOR_COLUMNS|いいえ||ボットの応答を構成するために使用されるドキュメントのベクトル埋め込みを含む検索インデックスのフィールドのリスト。`|` で結合（例: `"product_description|product_manual"`）。|
 
-    Pinecone uses vector search by default, so ensure these settings are configured on your app:
-    - `AZURE_OPENAI_EMBEDDING_NAME`: the name of your Ada (text-embedding-ada-002) model deployment on your Azure OpenAI resource.
-    - `PINECONE_VECTOR_COLUMNS`: the vector columns in your index to use when searching. Join them with `|` like `contentVector|titleVector`.
+    Pinecone はデフォルトでベクトル検索を使用するため、以下の設定をアプリに構成してください：
+    - `AZURE_OPENAI_EMBEDDING_NAME`: Azure OpenAI リソース上の Ada（`text-embedding-ada-002`）モデルデプロイメントの名前。
+    - `PINECONE_VECTOR_COLUMNS`: 検索に使用するインデックス内のベクトル列。`|` で結合（例: `contentVector|titleVector`）。
+
 
 #### Chat with your data using Mongo DB (Private Preview)
 
@@ -326,99 +333,98 @@ Note: RBAC assignments can take a few minutes before becoming effective.
     |AZURE_SQL_SERVER_DATABASE_NAME||Not publicly available at this time.|
     |AZURE_SQL_SERVER_DATABASE_SERVER||Not publicly available at this time.|
 
-#### Chat with your data using Promptflow
+#### Promptflow を使用したデータとのチャット
 
-Configure your settings using the table below.
+以下の表を使用して設定を構成します。
 
-| App Setting | Required? | Default Value | Note |
+| アプリ設定 | 必須か？ | デフォルト値 | 説明 |
 | --- | --- | --- | ------------- |
-|USE_PROMPTFLOW|No|False|Use existing Promptflow deployed endpoint. If set to `True` then both `PROMPTFLOW_ENDPOINT` and `PROMPTFLOW_API_KEY` also need to be set.|
-|PROMPTFLOW_ENDPOINT|Only if `USE_PROMPTFLOW` is True||URL of the deployed Promptflow endpoint e.g. https://pf-deployment-name.region.inference.ml.azure.com/score|
-|PROMPTFLOW_API_KEY|Only if `USE_PROMPTFLOW` is True||Auth key for deployed Promptflow endpoint. Note: only Key-based authentication is supported.|
-|PROMPTFLOW_RESPONSE_TIMEOUT|No|120|Timeout value in seconds for the Promptflow endpoint to respond.|
-|PROMPTFLOW_REQUEST_FIELD_NAME|No|query|Default field name to construct Promptflow request. Note: chat_history is auto constucted based on the interaction, if your API expects other mandatory field you will need to change the request parameters under `promptflow_request` function.|
-|PROMPTFLOW_RESPONSE_FIELD_NAME|No|reply|Default field name to process the response from Promptflow request.|
-|PROMPTFLOW_CITATIONS_FIELD_NAME|No|documents|Default field name to process the citations output from Promptflow request.|
+|USE_PROMPTFLOW|いいえ|False|既存の Promptflow デプロイメントエンドポイントを使用します。`True` に設定すると、`PROMPTFLOW_ENDPOINT` および `PROMPTFLOW_API_KEY` も設定する必要があります。|
+|PROMPTFLOW_ENDPOINT|`USE_PROMPTFLOW` が True の場合のみ||デプロイされた Promptflow エンドポイントの URL（例: https://pf-deployment-name.region.inference.ml.azure.com/score）。|
+|PROMPTFLOW_API_KEY|`USE_PROMPTFLOW` が True の場合のみ||デプロイされた Promptflow エンドポイントの認証キー。注意：キーベースの認証のみがサポートされています。|
+|PROMPTFLOW_RESPONSE_TIMEOUT|いいえ|120|Promptflow エンドポイントが応答するまでのタイムアウト値（秒単位）。|
+|PROMPTFLOW_REQUEST_FIELD_NAME|いいえ|query|Promptflow リクエストを構築する際のデフォルトのフィールド名。注意：チャット履歴は自動で構築されますが、APIが他の必須のフィールドを期待する場合は、`promptflow_request` 関数のリクエストパラメータを変更する必要があります。|
+|PROMPTFLOW_RESPONSE_FIELD_NAME|いいえ|reply|Promptflow からの応答を処理する際のデフォルトのフィールド名。|
+|PROMPTFLOW_CITATIONS_FIELD_NAME|いいえ|documents|Promptflow からの引用出力を処理する際のデフォルトのフィールド名。|
 
-#### Enable Chat History
+#### チャット履歴の有効化
 
-1. Update the `AZURE_OPENAI_*` environment variables as described in the [basic chat experience](#basic-chat-experience) above.
+1. 上記の [基本的なチャット体験](#basic-chat-experience) で説明したように、`AZURE_OPENAI_*` 環境変数を更新します。
 
-2. Add any additional configuration (described in previous sections) needed for chatting with data, if required.
+2. 必要に応じて、データとチャットするための追加の構成（前のセクションで説明）を追加します。
 
-3. To enable chat history, you will need to set up CosmosDB resources. The ARM template in the `infrastructure` folder can be used to deploy an app service and a CosmosDB with the database and container configured.
+3. チャット履歴を有効にするには、Cosmos DB リソースの設定が必要です。`infrastructure` フォルダ内の ARM テンプレートを使用して、アプリサービスと Cosmos DB をデプロイし、データベースとコンテナーを構成します。
 
-4. Configure data source settings as described in the table below.
+4. 以下の表に基づいてデータソース設定を構成します。
 
-    | App Setting | Required? | Default Value | Note |
-    | --- | --- | --- | ------------- |
-    |AZURE_COSMOSDB_ACCOUNT|Only if using chat history||The name of the Azure Cosmos DB account used for storing chat history|
-    |AZURE_COSMOSDB_DATABASE|Only if using chat history||The name of the Azure Cosmos DB database used for storing chat history|
-    |AZURE_COSMOSDB_CONVERSATIONS_CONTAINER|Only if using chat history||The name of the Azure Cosmos DB container used for storing chat history|
-    |AZURE_COSMOSDB_ACCOUNT_KEY|Only if using chat history||The account key for the Azure Cosmos DB account used for storing chat history|
-    |AZURE_COSMOSDB_ENABLE_FEEDBACK|No|False|Whether or not to enable message feedback on chat history messages|
+| アプリ設定 | 必須か？ | デフォルト値 | 説明 |
+| --- | --- | --- | ------------- |
+|AZURE_COSMOSDB_ACCOUNT|チャット履歴を使用する場合のみ||チャット履歴を保存するために使用する Azure Cosmos DB アカウントの名前。|
+|AZURE_COSMOSDB_DATABASE|チャット履歴を使用する場合のみ||チャット履歴を保存するために使用する Azure Cosmos DB データベースの名前。|
+|AZURE_COSMOSDB_CONVERSATIONS_CONTAINER|チャット履歴を使用する場合のみ||チャット履歴を保存するために使用する Azure Cosmos DB コンテナーの名前。|
+|AZURE_COSMOSDB_ACCOUNT_KEY|チャット履歴を使用する場合のみ||チャット履歴を保存するために使用する Azure Cosmos DB アカウントのキー。|
+|AZURE_COSMOSDB_ENABLE_FEEDBACK|いいえ|False|チャット履歴メッセージへのフィードバックを有効にするかどうか。|
 
+#### 一般的なカスタマイズシナリオ (例: デフォルトのチャットロゴやヘッダーの更新)
 
-#### Common Customization Scenarios (e.g. updating the default chat logo and headers)
+インターフェースのタイトルやロゴなど、いくつかの要素を環境変数を使用して簡単にカスタマイズすることができます。
 
-The interface allows for easy adaptation of the UI by modifying certain elements, such as the title and logo, through the use of the following environment variables.
-
-| App Setting | Required? | Default Value | Note |
+| アプリ設定 | 必須か？ | デフォルト値 | 説明 |
 |---|---|---|---|
-|UI_TITLE|No|Contoso| Chat title (left-top) and page title (HTML)
-|UI_LOGO|No|| Logo (left-top). Defaults to Contoso logo. Configure the URL to your logo image to modify.
-|UI_CHAT_LOGO|No|| Logo (chat window). Defaults to Contoso logo. Configure the URL to your logo image to modify.
-|UI_CHAT_TITLE|No|Start chatting| Title (chat window)
-|UI_CHAT_DESCRIPTION|No|This chatbot is configured to answer your questions| Description (chat window)
-|UI_FAVICON|No|| Defaults to Contoso favicon. Configure the URL to your favicon to modify.
-|UI_SHOW_SHARE_BUTTON|No|True|Share button (right-top)
-|UI_SHOW_CHAT_HISTORY_BUTTON|No|True|Show chat history button (right-top)
-|SANITIZE_ANSWER|No|False|Whether to sanitize the answer from Azure OpenAI. Set to True to remove any HTML tags from the response.|
+|UI_TITLE|いいえ|Contoso|チャットのタイトル（左上部）とページのタイトル（HTML）|
+|UI_LOGO|いいえ||ロゴ（左上部）。デフォルトは Contoso ロゴです。ロゴ画像の URL を設定してカスタマイズします。|
+|UI_CHAT_LOGO|いいえ||チャットウィンドウのロゴ。デフォルトは Contoso ロゴです。ロゴ画像の URL を設定してカスタマイズします。|
+|UI_CHAT_TITLE|いいえ|Start chatting|チャットウィンドウのタイトル|
+|UI_CHAT_DESCRIPTION|いいえ|This chatbot is configured to answer your questions|チャットウィンドウの説明|
+|UI_FAVICON|いいえ||デフォルトは Contoso のファビコンです。ファビコンの URL を設定してカスタマイズします。|
+|UI_SHOW_SHARE_BUTTON|いいえ|True|共有ボタン（右上部）を表示するかどうか。|
+|UI_SHOW_CHAT_HISTORY_BUTTON|いいえ|True|チャット履歴ボタン（右上部）を表示するかどうか。|
+|SANITIZE_ANSWER|いいえ|False|Azure OpenAI からの応答をサニタイズするかどうか。True に設定すると、応答からすべての HTML タグが削除されます。|
 
-Any custom images assigned to variables `UI_LOGO`, `UI_CHAT_LOGO` or `UI_FAVICON` should be added to the [public](https://github.com/microsoft/sample-app-aoai-chatGPT/tree/main/frontend/public) folder before building the project. The Vite build process will automatically copy theses files to the [static](https://github.com/microsoft/sample-app-aoai-chatGPT/tree/main/static) folder on each build of the frontend. The corresponding environment variables should then be set using a relative path such as `static/<my image filename>` to ensure that the frontend code can find them.
+`UI_LOGO`、`UI_CHAT_LOGO`、`UI_FAVICON` に割り当てたカスタム画像は、プロジェクトの [public](https://github.com/microsoft/sample-app-aoai-chatGPT/tree/main/frontend/public) フォルダに追加する必要があります。Vite ビルドプロセスにより、これらのファイルが [static](https://github.com/microsoft/sample-app-aoai-chatGPT/tree/main/static) フォルダに自動でコピーされます。これらの環境変数を設定する際には、フロントエンドコードが見つけられるように、相対パス `static/<ファイル名>` を指定する必要があります。
 
-Feel free to fork this repository and make your own modifications to the UX or backend logic. You can modify the source (`frontend/src`). For example, you may want to change aspects of the chat display, or expose some of the settings in `app.py` in the UI for users to try out different behaviors. After your code changes, you will need to rebuild the front-end via `start.sh` or `start.cmd`.
+このリポジトリをフォークして、UX やバックエンドのロジックをカスタマイズすることも可能です。ソース (`frontend/src`) を変更することで、チャットの表示や UI の一部を改良したり、`app.py` 内の設定をユーザーが試せるように公開することもできます。コード変更後は、`start.sh` または `start.cmd` を使用してフロントエンドを再ビルドする必要があります。
 
-### Scalability
-You can configure the number of threads and workers in `gunicorn.conf.py`. After making a change, redeploy your app using the commands listed above.
+### スケーラビリティ
+`gunicorn.conf.py` でスレッド数やワーカー数を構成できます。変更を加えた後は、上記のコマンドでアプリを再デプロイします。
 
-See the [Oryx documentation](https://github.com/microsoft/Oryx/blob/main/doc/configuration.md) for more details on these settings.
+### デプロイされたアプリのデバッグ
+まず、アプリサービスリソースに「DEBUG」という環境変数を追加し、「true」に設定します。
 
-### Debugging your deployed app
-First, add an environment variable on the app service resource called "DEBUG". Set this to "true".
+次に、アプリサービスでログを有効にします。「監視」の下の「アプリサービスログ」に移動し、アプリログの種類を「ファイルシステム」に変更して保存します。
 
-Next, enable logging on the app service. Go to "App Service logs" under Monitoring, and change Application logging to File System. Save the change.
+これで、「監視」の「ログストリーム」からアプリのログを確認できるようになります。
 
-Now, you should be able to see logs from your app by viewing "Log stream" under Monitoring.
+### 引用の表示の変更
+引用パネルは、`frontend/src/pages/chat/Chat.tsx` の末尾で定義されています。Azure OpenAI On Your Data から返された引用には、`content`、`title`、`filepath`、場合によっては `url` が含まれています。これをカスタマイズして表示方法を調整できます。たとえば、タイトル要素は、`url` が BLOB URL でない場合にクリック可能なハイパーリンクになります。
 
-### Changing Citation Display
-The Citation panel is defined at the end of `frontend/src/pages/chat/Chat.tsx`. The citations returned from Azure OpenAI On Your Data will include `content`, `title`, `filepath`, and in some cases `url`. You can customize the Citation section to use and display these as you like. For example, the title element is a clickable hyperlink if `url` is not a blob URL.
+```javascript
+<h5 
+    className={styles.citationPanelTitle} 
+    tabIndex={0} 
+    title={activeCitation.url && !activeCitation.url.includes("blob.core") ? activeCitation.url : activeCitation.title ?? ""} 
+    onClick={() => onViewSource(activeCitation)}
+>{activeCitation.title}</h5>
 
-```
-    <h5 
-        className={styles.citationPanelTitle} 
-        tabIndex={0} 
-        title={activeCitation.url && !activeCitation.url.includes("blob.core") ? activeCitation.url : activeCitation.title ?? ""} 
-        onClick={() => onViewSource(activeCitation)}
-    >{activeCitation.title}</h5>
-
-    const onViewSource = (citation: Citation) => {
-        if (citation.url && !citation.url.includes("blob.core")) {
-            window.open(citation.url, "_blank");
-        }
-    };
-
+const onViewSource = (citation: Citation) => {
+    if (citation.url && !citation.url.includes("blob.core")) {
+        window.open(citation.url, "_blank");
+    }
+};
 ```
 
-## Best Practices
-We recommend keeping these best practices in mind:
+## ベストプラクティス
 
-- Reset the chat session (clear chat) if the user changes any settings. Notify the user that their chat history will be lost.
-- Clearly communicate to the user what impact each setting will have on their experience.
-- When you rotate API keys for your AOAI or ACS resource, be sure to update the app settings for each of your deployed apps to use the new key.
-- Pull in changes from `main` frequently to ensure you have the latest bug fixes and improvements, especially when using Azure OpenAI on your data.
+以下のベストプラクティスを念頭に置いておくことをお勧めします：
 
-**A note on Azure OpenAI API versions**: The application code in this repo will implement the request and response contracts for the most recent preview API version supported for Azure OpenAI.  To keep your application up-to-date as the Azure OpenAI API evolves with time, be sure to merge the latest API version update into your own application code and redeploy using the methods described in this document.
+- ユーザーが設定を変更した場合は、チャットセッションをリセット（チャットをクリア）し、チャット履歴が失われることを通知します。
+- 各設定がユーザーにどのような影響を与えるかを明確に伝えましょう。
+- AOAI または ACS リソースの API キーを更新する際は、デプロイ済みのアプリすべてで新しいキーを使用するようにアプリ設定を更新することを忘れずに行いましょう。
+- Azure OpenAI でのデータ利用時に、バグ修正や改善を確保するために `main` から頻繁に変更を取り込むことをお勧めします。
+
+**Azure OpenAI API バージョンについての注意点**:
+このリポジトリのアプリケーションコードは、Azure OpenAI における最新のプレビュー API バージョンに基づいたリクエストと応答の契約を実装しています。時間の経過と共に Azure OpenAI API が進化する中で、アプリケーションを最新の状態に保つためには、リポジトリの最新の API バージョン更新を自分のアプリケーションコードにマージし、ドキュメントに記載された手法で再デプロイする必要があります。
+
 
 ## Contributing
 
